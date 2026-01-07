@@ -1,15 +1,163 @@
-# PDF Reference/Appendix Detection Tool
+# PDF Reference/Appendix Detection Tool | PDF引用附录检测工具
+
+[English](#english) | [中文](#中文)
+
+---
+
+## English
+
+Automatically detect where references and appendices begin in academic PDF papers, helping reduce token usage and costs when processing papers with LLMs.
+
+### Features
+
+- 🔍 **Auto-detect reference sections** - Uses heading matching and content analysis
+- ✂️ **PDF trimming** - Automatically remove references and appendices
+- 💰 **Save token costs** - Reduce text sent to GPT and other LLMs by ~50%
+- 🚀 **Lightweight** - Only requires PyMuPDF, no additional tools needed
+
+### Installation
+
+Install PyMuPDF dependency:
+
+```bash
+pip install pymupdf
+```
+
+### Usage
+
+#### 1. Detect Reference Start Page
+
+```bash
+python find_refs_start.py paper.pdf
+```
+
+Example output:
+```
+9
+```
+
+This means references/appendices start from page 9.
+
+**Verbose mode** (shows detection process):
+
+```bash
+python find_refs_start.py paper.pdf --verbose
+```
+
+#### 2. Trim PDF
+
+Trim PDF based on detected page number, keeping only main content:
+
+```bash
+# First detect
+START_PAGE=$(python find_refs_start.py paper.pdf)
+
+# Then trim (keeps pages 1-9, including References page)
+python trim_pdf.py paper.pdf $START_PAGE trimmed.pdf
+```
+
+Or specify page number directly:
+
+```bash
+python trim_pdf.py paper.pdf 9 trimmed.pdf
+```
+
+#### 3. Complete Workflow
+
+Full workflow for processing papers before sending to LLMs:
+
+```bash
+# 1. Download or prepare PDF
+# paper.pdf
+
+# 2. Detect reference start page
+python find_refs_start.py paper.pdf
+# Output: 9
+
+# 3. Trim PDF
+python trim_pdf.py paper.pdf 9 paper_main_content.pdf
+
+# 4. Convert trimmed PDF to text or send directly to LLM
+# Token count is now significantly reduced!
+```
+
+### How It Works
+
+The tool uses a three-stage detection strategy:
+
+#### Stage 1: Heading Matching
+Scans each page for common reference/appendix headers:
+- References / Bibliography
+- Appendix / Appendices
+- Supplementary Materials
+- Acknowledgements
+
+#### Stage 2: Content Scoring
+If no clear heading is found, scores each page based on reference-like features:
+- Citation brackets `[12]` (weight: 6)
+- Year patterns `2019` (weight: 1)
+- DOI patterns (weight: 8)
+- "et al." occurrences (weight: 4)
+- URLs (weight: 2)
+
+Finds consecutive pages with high scores to identify reference sections.
+
+#### Stage 3: Fallback
+Returns the page with the highest reference-likeness score.
+
+### Adjusting Detection Thresholds
+
+If detection results are inaccurate, modify parameters in `find_refs_start.py`:
+
+```python
+# Around line 90
+THRESHOLD = 40.0  # Increase for more conservative detection
+CONSECUTIVE_PAGES = 2  # Number of consecutive high-scoring pages needed
+```
+
+### Example Output
+
+```bash
+$ python find_refs_start.py sample-paper.pdf --verbose
+Found heading on page 9
+
+$ python trim_pdf.py sample-paper.pdf 9 output.pdf
+✓ Trimmed PDF saved to: output.pdf
+  Original: 12 pages
+  Trimmed: 9 pages (removed 3 pages)
+```
+
+### Files
+
+- `find_refs_start.py` - Main detection script
+- `trim_pdf.py` - PDF trimming utility
+- `README.md` - This documentation
+
+### Notes
+
+- Optimized for English academic papers
+- Non-standard formats may require threshold adjustments
+- Use `--verbose` mode to verify detection results
+- Backup original PDFs before trimming
+
+### License
+
+MIT
+
+---
+
+## 中文
 
 自动检测学术论文PDF中引用和附录的起始页码，帮助在使用LLM处理论文时减少token使用量和成本。
 
-## 功能特点
+### 功能特点
 
 - 🔍 **自动检测引用区起始页** - 使用标题匹配和内容特征分析
 - ✂️ **PDF裁剪功能** - 自动移除引用和附录部分
-- 💰 **节省token成本** - 减少发送给GPT等LLM的文本量
+- 💰 **节省token成本** - 减少发送给GPT等LLM的文本量约50%
 - 🚀 **轻量级** - 只依赖PyMuPDF，无需额外工具
 
-## 安装
+### 安装
 
 安装PyMuPDF依赖：
 
@@ -17,12 +165,12 @@
 pip install pymupdf
 ```
 
-## 使用方法
+### 使用方法
 
-### 1. 检测引用起始页
+#### 1. 检测引用起始页
 
 ```bash
-python find_refs_start.py sample-paper.pdf
+python find_refs_start.py paper.pdf
 ```
 
 输出示例：
@@ -35,28 +183,28 @@ python find_refs_start.py sample-paper.pdf
 **详细模式**（显示检测过程）：
 
 ```bash
-python find_refs_start.py sample-paper.pdf --verbose
+python find_refs_start.py paper.pdf --verbose
 ```
 
-### 2. 裁剪PDF
+#### 2. 裁剪PDF
 
 根据检测到的页码裁剪PDF，只保留主要内容：
 
 ```bash
 # 先检测
-START_PAGE=$(python find_refs_start.py sample-paper.pdf)
+START_PAGE=$(python find_refs_start.py paper.pdf)
 
-# 再裁剪（保留第1页到第8页）
-python trim_pdf.py sample-paper.pdf $START_PAGE trimmed.pdf
+# 再裁剪（保留第1-9页，包括References页）
+python trim_pdf.py paper.pdf $START_PAGE trimmed.pdf
 ```
 
 或者直接指定页码：
 
 ```bash
-python trim_pdf.py sample-paper.pdf 9 trimmed.pdf
+python trim_pdf.py paper.pdf 9 trimmed.pdf
 ```
 
-### 3. 完整工作流
+#### 3. 完整工作流
 
 处理论文并发送给LLM的完整流程：
 
@@ -75,18 +223,18 @@ python trim_pdf.py paper.pdf 9 paper_main_content.pdf
 # 现在token数量大大减少！
 ```
 
-## 工作原理
+### 工作原理
 
-工具使用两阶段检测策略：
+工具使用三阶段检测策略：
 
-### 阶段1：标题匹配
+#### 阶段1：标题匹配
 扫描每一页，查找常见的引用/附录标题：
 - References / Bibliography
 - Appendix / Appendices  
 - Supplementary Materials
 - Acknowledgements
 
-### 阶段2：内容特征打分
+#### 阶段2：内容特征打分
 如果没找到明确标题，则基于以下特征对每页打分：
 - 引用括号 `[12]` 的数量（权重：6）
 - 年份模式 `2019` 的数量（权重：1）
@@ -96,10 +244,10 @@ python trim_pdf.py paper.pdf 9 paper_main_content.pdf
 
 找到连续多页得分都很高的位置，判定为引用区开始。
 
-### 阶段3：兜底策略
+#### 阶段3：兜底策略
 如果前两个阶段都没有明确结果，返回得分最高的页面。
 
-## 调整检测阈值
+### 调整检测阈值
 
 如果检测结果不准确，可以修改 `find_refs_start.py` 中的参数：
 
@@ -109,7 +257,7 @@ THRESHOLD = 40.0  # 提高此值会更保守（更晚才认为是引用区）
 CONSECUTIVE_PAGES = 2  # 需要连续多少页高分才判定为引用区
 ```
 
-## 示例输出
+### 示例输出
 
 ```bash
 $ python find_refs_start.py sample-paper.pdf --verbose
@@ -118,23 +266,22 @@ Found heading on page 9
 $ python trim_pdf.py sample-paper.pdf 9 output.pdf
 ✓ Trimmed PDF saved to: output.pdf
   Original: 12 pages
-  Trimmed: 8 pages (removed 4 pages)
+  Trimmed: 9 pages (removed 3 pages)
 ```
 
-## 文件说明
+### 文件说明
 
 - `find_refs_start.py` - 主检测脚本
 - `trim_pdf.py` - PDF裁剪工具
-- `sample-paper.pdf` - 示例论文
 - `README.md` - 本文档
 
-## 注意事项
+### 注意事项
 
 - 工具主要针对英文学术论文优化
 - 对于非标准格式的论文可能需要调整阈值
 - 建议先用 `--verbose` 模式检查检测结果是否合理
 - 裁剪前建议备份原始PDF
 
-## License
+### 许可证
 
 MIT
