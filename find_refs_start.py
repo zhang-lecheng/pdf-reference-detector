@@ -27,6 +27,13 @@ HEAD_PATTERNS = [
     r"^\s*appendices\s*$",
     r"^\s*supplementary\s*(materials?|information)\s*$",
     r"^\s*acknowledg(e)?ments\s*$",
+    # Numbered section headings (e.g., "7. References", "A. Appendix")
+    r"^\s*\d+\.?\s+references\s*$",
+    r"^\s*\d+\.?\s+bibliography\s*$",
+    r"^\s*\d+\.?\s+appendix\s*$",
+    r"^\s*\d+\.?\s+appendices\s*$",
+    r"^\s*[a-z]\.?\s+references\s*$",
+    r"^\s*[a-z]\.?\s+appendix\s*$",
 ]
 
 
@@ -117,9 +124,22 @@ def find_start_page(pdf_path: str, verbose: bool = False) -> int:
         
         scores.append(refs_likeness_score(text))
     
-    # Stage 2: Find FIRST page that exceeds threshold (more conservative)
-    # Lower threshold to catch earlier reference pages
-    THRESHOLD = 30.0  # Lowered from 40.0 for better early detection
+    # Stage 2: Look for consecutive high-scoring pages (most reliable for no-heading papers)
+    # This catches reference sections that span multiple pages
+    CONSECUTIVE_THRESHOLD = 35.0
+    CONSECUTIVE_PAGES = 2
+    
+    for i in range(len(scores) - CONSECUTIVE_PAGES + 1):
+        if all(s > CONSECUTIVE_THRESHOLD for s in scores[i:i+CONSECUTIVE_PAGES]):
+            if verbose:
+                print(f"Found consecutive high-scoring pages starting at {i+1}", file=sys.stderr)
+                print(f"Scores: {scores[i:i+CONSECUTIVE_PAGES]}", file=sys.stderr)
+            doc.close()
+            return i + 1
+    
+    # Stage 3: Find FIRST page with very high score (likely references)
+    # Higher threshold to avoid false positives from citation-heavy main text
+    HIGH_THRESHOLD = 45.0
     
     if verbose:
         print(f"Page scores:", file=sys.stderr)
@@ -127,38 +147,44 @@ def find_start_page(pdf_path: str, verbose: bool = False) -> int:
             if score > 20:  # Only show pages with some reference-like content
                 print(f"  Page {i+1}: {score:.2f}", file=sys.stderr)
     
-    # Find first page that exceeds threshold
+    # Find first page that exceeds high threshold
     for i, score in enumerate(scores):
-        if score > THRESHOLD:
+        if score > HIGH_THRESHOLD:
             if verbose:
-                print(f"First page above threshold ({THRESHOLD}): page {i+1} (score: {score:.2f})", file=sys.stderr)
+                print(f"First page above high threshold ({HIGH_THRESHOLD}): page {i+1} (score: {score:.2f})", file=sys.stderr)
             doc.close()
             return i + 1
     
-    # Stage 3: Find first page in a sequence of high-scoring pages
+    # Stage 4: Find first page in a sequence of moderately high-scoring pages
     # Look for where reference-like content starts to appear consistently
     WINDOW_SIZE = 3
-    AVG_THRESHOLD = 25.0
+    AVG_THRESHOLD = 30.0
     
     for i in range(len(scores) - WINDOW_SIZE + 1):
         window_avg = sum(scores[i:i+WINDOW_SIZE]) / WINDOW_SIZE
         if window_avg > AVG_THRESHOLD:
-            if verbose:
-                print(f"Found reference-like window starting at page {i+1} (avg score: {window_avg:.2f})", file=sys.stderr)
-            doc.close()
-            return i + 1
+            # Additional check: make sure at least one page in window has high score
+            if any(s > 35 for s in scores[i:i+WINDOW_SIZE]):
+                if verbose:
+                    print(f"Found reference-like window starting at page {i+1} (avg score: {window_avg:.2f})", file=sys.stderr)
+                doc.close()
+                return i + 1
     
-    # Stage 4: Fallback - return page with highest score
+    # Stage 5: Fallback - return page with highest score if it's reasonably high
     if scores:
         best = max(range(len(scores)), key=lambda j: scores[j])
-        if verbose:
-            print(f"Fallback: highest scoring page is {best+1} (score: {scores[best]:.2f})", file=sys.stderr)
-        doc.close()
-        return best + 1
+        if scores[best] > 30.0:  # Only use fallback if score is reasonable
+            if verbose:
+                print(f"Fallback: highest scoring page is {best+1} (score: {scores[best]:.2f})", file=sys.stderr)
+            doc.close()
+            return best + 1
     
-    # If all else fails, return last page
+    # If all else fails, assume last 20% of document is references
+    fallback_page = max(1, int(len(scores) * 0.8))
+    if verbose:
+        print(f"No clear references found, using 80% heuristic: page {fallback_page}", file=sys.stderr)
     doc.close()
-    return doc.page_count
+    return fallback_page
 
 
 if __name__ == "__main__":
