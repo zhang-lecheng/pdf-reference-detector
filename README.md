@@ -81,6 +81,21 @@ python trim_pdf.py paper.pdf 9 paper_main_content.pdf
 # Token count is now significantly reduced!
 ```
 
+#### 4. Batch Processing
+
+Process all PDF files in a directory at once:
+
+```bash
+# Process all PDFs in current directory, output to ./output
+python batch_process.py
+
+# Specify custom input and output directories
+python batch_process.py --input-dir /path/to/pdfs --output-dir /path/to/output
+
+# Verbose mode for detailed information
+python batch_process.py --verbose
+```
+
 ### How It Works
 
 The tool uses a three-stage detection strategy:
@@ -131,6 +146,7 @@ $ python trim_pdf.py sample-paper.pdf 9 output.pdf
 
 - `find_refs_start.py` - Main detection script
 - `trim_pdf.py` - PDF trimming utility
+- `batch_process.py` - Batch processing script for multiple PDFs
 - `README.md` - This documentation
 
 ### Notes
@@ -223,6 +239,21 @@ python trim_pdf.py paper.pdf 9 paper_main_content.pdf
 # 现在token数量大大减少！
 ```
 
+#### 4. 批量处理
+
+一次处理目录中的所有PDF文件：
+
+```bash
+# 处理当前目录所有PDF，输出到 ./output
+python batch_process.py
+
+# 指定自定义输入和输出目录
+python batch_process.py --input-dir /path/to/pdfs --output-dir /path/to/output
+
+# 详细模式显示处理信息
+python batch_process.py --verbose
+```
+
 ### 工作原理
 
 工具使用三阶段检测策略：
@@ -273,6 +304,7 @@ $ python trim_pdf.py sample-paper.pdf 9 output.pdf
 
 - `find_refs_start.py` - 主检测脚本
 - `trim_pdf.py` - PDF裁剪工具
+- `batch_process.py` - 批量处理脚本
 - `README.md` - 本文档
 
 ### 注意事项
