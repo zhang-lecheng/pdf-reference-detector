@@ -96,6 +96,21 @@ python batch_process.py --input-dir /path/to/pdfs --output-dir /path/to/output
 python batch_process.py --verbose
 ```
 
+#### 5. Concatenate PDFs
+
+Merge all trimmed PDFs into a single file for easier processing:
+
+```bash
+# Merge all PDFs in output directory
+python concat_pdfs.py ./output all_papers_combined.pdf
+
+# Use default output filename (merged.pdf)
+python concat_pdfs.py ./output
+
+# Verbose mode
+python concat_pdfs.py ./output combined.pdf --verbose
+```
+
 ### How It Works
 
 The tool uses a three-stage detection strategy:
@@ -147,6 +162,7 @@ $ python trim_pdf.py sample-paper.pdf 9 output.pdf
 - `find_refs_start.py` - Main detection script
 - `trim_pdf.py` - PDF trimming utility
 - `batch_process.py` - Batch processing script for multiple PDFs
+- `concat_pdfs.py` - PDF concatenation utility
 - `README.md` - This documentation
 
 ### Notes
@@ -254,6 +270,21 @@ python batch_process.py --input-dir /path/to/pdfs --output-dir /path/to/output
 python batch_process.py --verbose
 ```
 
+#### 5. 合并PDF
+
+将所有裁剪后的PDF合并为一个文件，方便批量处理：
+
+```bash
+# 合并output目录中的所有PDF
+python concat_pdfs.py ./output all_papers_combined.pdf
+
+# 使用默认输出文件名 (merged.pdf)
+python concat_pdfs.py ./output
+
+# 详细模式
+python concat_pdfs.py ./output combined.pdf --verbose
+```
+
 ### 工作原理
 
 工具使用三阶段检测策略：
@@ -305,6 +336,7 @@ $ python trim_pdf.py sample-paper.pdf 9 output.pdf
 - `find_refs_start.py` - 主检测脚本
 - `trim_pdf.py` - PDF裁剪工具
 - `batch_process.py` - 批量处理脚本
+- `concat_pdfs.py` - PDF合并工具
 - `README.md` - 本文档
 
 ### 注意事项
