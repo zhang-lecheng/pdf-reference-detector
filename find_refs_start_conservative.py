@@ -1,17 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-PDF Reference/Appendix Start Page Detector
+Enhanced PDF Reference/Appendix Start Page Detector
 
-This script analyzes academic PDF papers to automatically detect where
-references and appendices begin, helping reduce token usage when processing
-papers with LLMs.
+This script provides more conservative detection to find the FIRST page
+where references likely begin, not just the page with the highest score.
 
 Usage:
-    python find_refs_start.py paper.pdf
-    
-Output:
-    Page number (1-based) where references/appendices likely start
+    python find_refs_start_conservative.py paper.pdf
 """
 
 import re
@@ -31,17 +27,8 @@ HEAD_PATTERNS = [
 
 
 def is_heading_hit(text: str) -> bool:
-    """
-    Check if page contains a clear reference/appendix section heading.
-    
-    Args:
-        text: Text content of a PDF page
-        
-    Returns:
-        True if a reference/appendix heading is found
-    """
+    """Check if page contains a clear reference/appendix section heading."""
     lines = [ln.strip().lower() for ln in text.splitlines() if ln.strip()]
-    # Only check first 25 lines to avoid false positives from body text
     for ln in lines[:25]:
         for pat in HEAD_PATTERNS:
             if re.match(pat, ln):
@@ -50,34 +37,17 @@ def is_heading_hit(text: str) -> bool:
 
 
 def refs_likeness_score(text: str) -> float:
-    """
-    Calculate how much a page looks like a references section.
-    
-    Scores based on common reference patterns:
-    - Citation brackets like [12]
-    - Years (19xx, 20xx)
-    - DOI patterns
-    - "et al." occurrences
-    - URLs
-    
-    Args:
-        text: Text content of a PDF page
-        
-    Returns:
-        Normalized score (higher = more reference-like)
-    """
+    """Calculate how much a page looks like a references section."""
     t = text.lower()
     if len(t) < 200:
         return 0.0
 
-    # Count reference-like patterns
-    bracket_cites = len(re.findall(r"\[\s*\d{1,3}\s*\]", t))          # [12]
-    year_hits     = len(re.findall(r"\b(19|20)\d{2}\b", t))           # 2019
+    bracket_cites = len(re.findall(r"\[\s*\d{1,3}\s*\]", t))
+    year_hits     = len(re.findall(r"\b(19|20)\d{2}\b", t))
     doi_hits      = len(re.findall(r"\bdoi\b|10\.\d{4,9}/[-._;()/:a-z0-9]+", t))
     etal_hits     = len(re.findall(r"\bet al\.\b", t))
     url_hits      = len(re.findall(r"https?://", t))
 
-    # Normalize by text length to avoid bias toward longer pages
     L = max(len(t), 1)
     score = (bracket_cites*6 + year_hits*1 + doi_hits*8 + etal_hits*4 + url_hits*2) / (L/1000)
     return score
@@ -86,16 +56,7 @@ def refs_likeness_score(text: str) -> float:
 def find_start_page(pdf_path: str, verbose: bool = False) -> int:
     """
     Find the page number where references/appendices likely start.
-    
-    Uses a conservative approach to find the FIRST page with references,
-    not just the page with the highest score.
-    
-    Args:
-        pdf_path: Path to the PDF file
-        verbose: If True, print debug information
-        
-    Returns:
-        1-based page number where references/appendices start
+    Uses a more conservative approach to find the FIRST page with references.
     """
     try:
         doc = fitz.open(pdf_path)
@@ -113,13 +74,13 @@ def find_start_page(pdf_path: str, verbose: bool = False) -> int:
             if verbose:
                 print(f"Found heading on page {i+1}", file=sys.stderr)
             doc.close()
-            return i + 1  # 1-based page number
+            return i + 1
         
         scores.append(refs_likeness_score(text))
     
     # Stage 2: Find FIRST page that exceeds threshold (more conservative)
     # Lower threshold to catch earlier reference pages
-    THRESHOLD = 30.0  # Lowered from 40.0 for better early detection
+    THRESHOLD = 30.0  # Lowered from 40.0
     
     if verbose:
         print(f"Page scores:", file=sys.stderr)
@@ -156,16 +117,13 @@ def find_start_page(pdf_path: str, verbose: bool = False) -> int:
         doc.close()
         return best + 1
     
-    # If all else fails, return last page
     doc.close()
     return doc.page_count
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python find_refs_start.py <pdf_file> [--verbose]", file=sys.stderr)
-        print("\nDetects where references/appendices start in academic papers.", file=sys.stderr)
-        print("Output: Page number (1-based) where references likely begin.", file=sys.stderr)
+        print("Usage: python find_refs_start_conservative.py <pdf_file> [--verbose]", file=sys.stderr)
         sys.exit(1)
     
     pdf_file = sys.argv[1]
